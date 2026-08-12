@@ -1771,6 +1771,15 @@ tbody tr:hover {
   color: var(--primary);
 }
 
+/* Get Started button: pill-rounded, white text (overrides the nav link color) */
+.landing-nav-links .btn-primary {
+  color: #fff;
+  border-radius: var(--radius-pill);
+}
+.landing-nav-links .btn-primary:hover {
+  color: #fff;
+}
+
 /* Hero Section */
 .landing-hero {
   padding: 80px 48px 100px;
