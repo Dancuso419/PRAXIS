@@ -1,0 +1,147 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  fullName     String
+  matricNumber String   @unique
+  email        String   @unique
+  password     String
+  faculty      String
+  department   String
+  level        String
+  role         String   @default("STUDENT")
+  isVerified   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  votedRecords    VoterRecord[]
+  verificationTokens VerificationToken[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+model Election {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  startTime   DateTime
+  endTime     DateTime
+  status      String   @default("DRAFT")
+  createdAt   DateTime @default(now())
+
+  eligibility  EligibilityRule?
+  candidates   Candidate[]
+  positions    Position[]
+  voterRecords VoterRecord[]
+  votes        Vote[]
+  announcements Announcement[]
+}
+
+model EligibilityRule {
+  id         String  @id @default(uuid())
+  electionId String  @unique
+  faculty    String?
+  department String?
+  level      String?
+
+  election Election @relation(fields: [electionId], references: [id])
+}
+
+model Position {
+  id         String @id @default(uuid())
+  title      String
+  electionId String
+
+  election   Election    @relation(fields: [electionId], references: [id])
+  candidates Candidate[]
+  votes      Vote[]
+}
+
+model Candidate {
+  id               String  @id @default(uuid())
+  fullName         String
+  department       String
+  level            String
+  profilePicture   String?
+  manifesto        String
+  slogan           String?
+  isDisqualified   Boolean @default(false)
+  disqualifyReason String?
+
+  electionId String
+  positionId String
+
+  election Election  @relation(fields: [electionId], references: [id])
+  position Position  @relation(fields: [positionId], references: [id])
+  votes    Vote[]
+}
+
+model VoterRecord {
+  id          String   @id @default(uuid())
+  userId      String
+  electionId  String
+  positionId  String
+  votedAt     DateTime @default(now())
+  receiptHash String   @unique
+
+  user     User     @relation(fields: [userId], references: [id])
+  election Election @relation(fields: [electionId], references: [id])
+
+  @@unique([userId, electionId, positionId])
+}
+
+model Vote {
+  id          String   @id @default(uuid())
+  electionId  String
+  positionId  String
+  candidateId String
+  castAt      DateTime @default(now())
+
+  election  Election  @relation(fields: [electionId], references: [id])
+  position  Position  @relation(fields: [positionId], references: [id])
+  candidate Candidate @relation(fields: [candidateId], references: [id])
+}
+
+model Announcement {
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+
+  electionId String?
+  election   Election? @relation(fields: [electionId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  actorId   String?
+  details   String?
+  createdAt DateTime @default(now())
+}
+
+model VerificationToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  type      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}

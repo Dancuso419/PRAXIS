@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter Four: System Design and Implementation</title>
+</head>
+<body style="margin:0; padding:32px; background:#f4f3ee;">
+<!-- ================= CHAPTER FOUR ================= -->
+<section style="font-family: Georgia, 'Times New Roman', serif; line-height: 1.6; color: #1a1d2b; max-width: 900px; margin: 0 auto; background:#fcfbf7; padding:40px; box-shadow:0 4px 16px rgba(0,0,0,0.06);">
+
+  <h1 style="border-bottom: 3px solid #0D7E45; padding-bottom: 8px;">
+    CHAPTER FOUR: SYSTEM DESIGN AND IMPLEMENTATION
+  </h1>
+
+  <!-- 4.1 -->
+  <h2>4.1 Objective of the New System</h2>
+  <p>
+    The new system, named Praxis, is a web based student union electronic voting platform
+    created to replace the manual, paper based conduct of tertiary institution elections.
+    The central aim is to deliver a secure and verifiable channel through which eligible
+    students register, authenticate, review candidate manifestos, and cast their ballots
+    within a controlled time window.
+  </p>
+  <p>The specific objectives that guided the design are stated below:</p>
+  <ul>
+    <li>To automate voter registration and institutional email verification so that only genuine students gain voting access.</li>
+    <li>To separate the content of a ballot from the identity of the voter, thereby guaranteeing ballot secrecy while still preventing repeat voting.</li>
+    <li>To compute results directly from an immutable vote ledger, removing human counting errors and shortening the interval between poll closure and result release.</li>
+    <li>To divide administrative authority into two tiers so that no single officer can unilaterally activate an election or publish an outcome.</li>
+    <li>To maintain a permanent audit record of every sensitive operation for accountability and dispute resolution.</li>
+  </ul>
+
+  <!-- 4.2 -->
+  <h2>4.2 Main Menu (Control Center)</h2>
+  <p>
+    The control center of Praxis is the persistent side navigation panel rendered on every
+    authenticated page. It acts as the launch point from which a user reaches each functional
+    area without returning to a home screen. The items presented adapt to the role attached to
+    the signed in account, so a student sees a lean list while a super administrator sees the
+    full command set.
+  </p>
+  <table border="1" cellspacing="0" cellpadding="8" style="border-collapse: collapse; width: 100%;">
+    <thead style="background: #E4F3EA;">
+      <tr>
+        <th align="left">Menu Item</th>
+        <th align="left">Destination</th>
+        <th align="left">Visible To</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Dashboard</td><td>Personal overview of active, upcoming and past elections</td><td>All roles</td></tr>
+      <tr><td>Admin Panel</td><td>Election creation and lifecycle control</td><td>Election Officer, Super Admin</td></tr>
+      <tr><td>Announcements</td><td>Publication of notices and reminders</td><td>Election Officer, Super Admin</td></tr>
+      <tr><td>User Management</td><td>Creation and removal of officer accounts</td><td>Super Admin only</td></tr>
+      <tr><td>Account Settings</td><td>Profile and password configuration</td><td>All roles</td></tr>
+      <tr><td>Notifications</td><td>Unread announcement indicator in the top bar</td><td>All roles</td></tr>
+    </tbody>
+  </table>
+  <div style="background:#f4f3ee; border:1px dashed #999; padding:14px; margin:16px 0; text-align:center; font-style:italic;">
+    [Insert screenshot of the student dashboard with the side navigation control center here]
+  </div>
+
+  <!-- 4.3 -->
+  <h2>4.3 Sub Menu / Sub System</h2>
+  <p>
+    Each control center item opens a dedicated sub system that groups related tasks. The
+    following breakdown shows how the platform is partitioned by responsibility.
+  </p>
+  <table border="1" cellspacing="0" cellpadding="8" style="border-collapse: collapse; width: 100%;">
+    <thead style="background: #E4F3EA;">
+      <tr><th align="left">Sub System</th><th align="left">Functions Provided</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Authentication sub system</td><td>Registration, email verification, sign in, password reset, session handling.</td></tr>
+      <tr><td>Voter sub system</td><td>Browsing elections, reading manifestos, comparing candidates, casting ballots, retrieving receipts.</td></tr>
+      <tr><td>Election management sub system</td><td>Drafting elections, adding positions, scheduling, activation and closure.</td></tr>
+      <tr><td>Candidate management sub system</td><td>Registering aspirants, editing records, and disqualifying with a logged reason.</td></tr>
+      <tr><td>Results sub system</td><td>Tallying from the ledger, holding pending results, publication, and recount.</td></tr>
+      <tr><td>Governance sub system</td><td>Officer account provisioning, eligibility configuration, and audit inspection.</td></tr>
+    </tbody>
+  </table>
+  <div style="background:#f4f3ee; border:1px dashed #999; padding:14px; margin:16px 0; text-align:center; font-style:italic;">
+    [Insert screenshot of the admin panel sub system here]
+  </div>
+
+  <!-- 4.4 -->
+  <h2>4.4 Database Specifications</h2>
+  <p>
+    Persistent storage is handled by a relational SQLite database accessed through the Prisma
+    object relational mapper. The schema is normalised to reduce redundancy, and a deliberate
+    design decision keeps the cast ballot in a separate table from the voter record so that no
+    query can link a person to a selection. The principal tables are specified below.
+  </p>
+
+  <h3>4.4.1 User Table</h3>
+  <table border="1" cellspacing="0" cellpadding="6" style="border-collapse: collapse; width: 100%;">
+    <thead style="background:#E4F3EA;"><tr><th align="left">Field</th><th align="left">Data Type</th><th align="left">Description</th></tr></thead>
+    <tbody>
+      <tr><td>id</td><td>String (UUID)</td><td>Primary key, uniquely identifies each account.</td></tr>
+      <tr><td>fullName</td><td>String</td><td>Legal name of the registered user.</td></tr>
+      <tr><td>matricNumber</td><td>String, unique</td><td>Institutional matriculation or staff identifier.</td></tr>
+      <tr><td>email</td><td>String, unique</td><td>Institutional email used for verification and login.</td></tr>
+      <tr><td>password</td><td>String</td><td>Salted hash of the chosen password, never stored in plain form.</td></tr>
+      <tr><td>faculty</td><td>String</td><td>Faculty declared at registration.</td></tr>
+      <tr><td>department</td><td>String</td><td>Department of study.</td></tr>
+      <tr><td>level</td><td>String</td><td>Current academic level.</td></tr>
+      <tr><td>role</td><td>String</td><td>Access tier: STUDENT, ELECTION_OFFICER or SUPER_ADMIN.</td></tr>
+      <tr><td>isVerified</td><td>Boolean</td><td>Indicates whether the email has been confirmed.</td></tr>
+      <tr><td>createdAt</td><td>DateTime</td><td>Timestamp of account creation.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>4.4.2 Election Table</h3>
+  <table border="1" cellspacing="0" cellpadding="6" style="border-collapse: collapse; width: 100%;">
+    <thead style="background:#E4F3EA;"><tr><th align="left">Field</th><th align="left">Data Type</th><th align="left">Description</th></tr></thead>
+    <tbody>
+      <tr><td>id</td><td>String (UUID)</td><td>Primary key of the election.</td></tr>
+      <tr><td>title</td><td>String</td><td>Official name of the election.</td></tr>
+      <tr><td>description</td><td>String</td><td>Summary of purpose and scope.</td></tr>
+      <tr><td>startTime</td><td>DateTime</td><td>Moment voting opens.</td></tr>
+      <tr><td>endTime</td><td>DateTime</td><td>Moment voting closes.</td></tr>
+      <tr><td>status</td><td>String</td><td>Lifecycle stage: DRAFT, SCHEDULED, ACTIVE, CLOSED or RESULTS_PUBLISHED.</td></tr>
+      <tr><td>createdAt</td><td>DateTime</td><td>Record creation timestamp.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>4.4.3 Position and Candidate Tables</h3>
+  <table border="1" cellspacing="0" cellpadding="6" style="border-collapse: collapse; width: 100%;">
+    <thead style="background:#E4F3EA;"><tr><th align="left">Field</th><th align="left">Data Type</th><th align="left">Description</th></tr></thead>
+    <tbody>
+      <tr><td>Position.id</td><td>String (UUID)</td><td>Primary key of a contested seat.</td></tr>
+      <tr><td>Position.title</td><td>String</td><td>Name of the seat, for example President.</td></tr>
+      <tr><td>Position.electionId</td><td>String (FK)</td><td>Election the seat belongs to.</td></tr>
+      <tr><td>Candidate.id</td><td>String (UUID)</td><td>Primary key of an aspirant.</td></tr>
+      <tr><td>Candidate.fullName</td><td>String</td><td>Name of the aspirant.</td></tr>
+      <tr><td>Candidate.department</td><td>String</td><td>Department of the aspirant.</td></tr>
+      <tr><td>Candidate.level</td><td>String</td><td>Academic level of the aspirant.</td></tr>
+      <tr><td>Candidate.manifesto</td><td>String</td><td>Full statement of intent.</td></tr>
+      <tr><td>Candidate.slogan</td><td>String, optional</td><td>Short campaign phrase.</td></tr>
+      <tr><td>Candidate.isDisqualified</td><td>Boolean</td><td>Flags removal from the race.</td></tr>
+      <tr><td>Candidate.disqualifyReason</td><td>String, optional</td><td>Justification retained for audit.</td></tr>
+      <tr><td>Candidate.positionId</td><td>String (FK)</td><td>Seat being contested.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>4.4.4 Vote and VoterRecord Tables</h3>
+  <p>
+    These two tables enforce ballot secrecy. The Vote table holds anonymous selections, while
+    the VoterRecord table only confirms that a person participated. A composite unique
+    constraint on the VoterRecord prevents any student from voting twice for the same seat.
+  </p>
+  <table border="1" cellspacing="0" cellpadding="6" style="border-collapse: collapse; width: 100%;">
+    <thead style="background:#E4F3EA;"><tr><th align="left">Field</th><th align="left">Data Type</th><th align="left">Description</th></tr></thead>
+    <tbody>
+      <tr><td>Vote.id</td><td>String (UUID)</td><td>Primary key of an anonymous ballot.</td></tr>
+      <tr><td>Vote.electionId</td><td>String (FK)</td><td>Election the ballot belongs to.</td></tr>
+      <tr><td>Vote.positionId</td><td>String (FK)</td><td>Seat the ballot applies to.</td></tr>
+      <tr><td>Vote.candidateId</td><td>String (FK)</td><td>Chosen aspirant, with no reference to the voter.</td></tr>
+      <tr><td>Vote.castAt</td><td>DateTime</td><td>Time the ballot was recorded.</td></tr>
+      <tr><td>VoterRecord.id</td><td>String (UUID)</td><td>Primary key of a participation record.</td></tr>
+      <tr><td>VoterRecord.userId</td><td>String (FK)</td><td>Participating student.</td></tr>
+      <tr><td>VoterRecord.electionId</td><td>String (FK)</td><td>Election participated in.</td></tr>
+      <tr><td>VoterRecord.positionId</td><td>String (FK)</td><td>Seat participated in.</td></tr>
+      <tr><td>VoterRecord.receiptHash</td><td>String, unique</td><td>Cryptographic proof of submission returned to the voter.</td></tr>
+      <tr><td>VoterRecord.votedAt</td><td>DateTime</td><td>Time participation was logged.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>4.4.5 Supporting Tables</h3>
+  <table border="1" cellspacing="0" cellpadding="6" style="border-collapse: collapse; width: 100%;">
+    <thead style="background:#E4F3EA;"><tr><th align="left">Table</th><th align="left">Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>EligibilityRule</td><td>Stores optional faculty, department and level filters that gate participation per election.</td></tr>
+      <tr><td>Announcement</td><td>Holds notices linked optionally to a specific election.</td></tr>
+      <tr><td>AuditLog</td><td>Append only record of actions, actor identity and timestamps.</td></tr>
+      <tr><td>VerificationToken</td><td>Time limited tokens issued for email confirmation.</td></tr>
+      <tr><td>PasswordResetToken</td><td>Time limited tokens issued for password recovery.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 4.5 -->
+  <h2>4.5 Program Module Specification</h2>
+  <p>
+    The code base is organised into cohesive modules, each owning a controller on the server
+    and one or more screens on the client. This separation keeps every concern independently
+    testable.
+  </p>
+  <table border="1" cellspacing="0" cellpadding="8" style="border-collapse: collapse; width: 100%;">
+    <thead style="background:#E4F3EA;"><tr><th align="left">Module</th><th align="left">Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td>Authentication module</td><td>Validates credentials, issues signed tokens, and manages verification and recovery flows.</td></tr>
+      <tr><td>Election module</td><td>Creates drafts, attaches positions, and transitions elections through their lifecycle.</td></tr>
+      <tr><td>Candidate module</td><td>Registers and maintains aspirant records including disqualification handling.</td></tr>
+      <tr><td>Voting module</td><td>Accepts a selection, writes the anonymous ballot and the participation record atomically, and returns a receipt.</td></tr>
+      <tr><td>Results module</td><td>Aggregates ballots, determines winners, and controls publication and recount.</td></tr>
+      <tr><td>Announcement module</td><td>Publishes and retrieves notices for the dashboard.</td></tr>
+      <tr><td>Governance module</td><td>Provisions officer accounts, sets eligibility, and exposes audit entries.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 4.6 -->
+  <h2>4.6 Input and Output Specification</h2>
+  <p>The tables below map the data supplied by users against the responses produced by the system.</p>
+  <h3>4.6.1 Inputs</h3>
+  <table border="1" cellspacing="0" cellpadding="6" style="border-collapse: collapse; width: 100%;">
+    <thead style="background:#E4F3EA;"><tr><th align="left">Input Form</th><th align="left">Fields Captured</th></tr></thead>
+    <tbody>
+      <tr><td>Registration</td><td>Full name, matric number, email, password, faculty, department, level.</td></tr>
+      <tr><td>Login</td><td>Email and password.</td></tr>
+      <tr><td>Election creation</td><td>Title, description, start time, end time, list of positions.</td></tr>
+      <tr><td>Candidate entry</td><td>Name, position, department, level, manifesto, slogan.</td></tr>
+      <tr><td>Ballot</td><td>One candidate selection per contested seat.</td></tr>
+      <tr><td>Officer creation</td><td>Name, email, password, department.</td></tr>
+    </tbody>
+  </table>
+  <h3>4.6.2 Outputs</h3>
+  <table border="1" cellspacing="0" cellpadding="6" style="border-collapse: collapse; width: 100%;">
+    <thead style="background:#E4F3EA;"><tr><th align="left">Output</th><th align="left">Content Presented</th></tr></thead>
+    <tbody>
+      <tr><td>Verification message</td><td>Confirmation that an account is active or a notice to check the inbox.</td></tr>
+      <tr><td>Dashboard summary</td><td>Counts of active, upcoming and completed elections plus recent notices.</td></tr>
+      <tr><td>Vote receipt</td><td>Unique receipt hash proving that a ballot was recorded.</td></tr>
+      <tr><td>Result sheet</td><td>Ranked tallies per position with the winner highlighted.</td></tr>
+      <tr><td>Audit listing</td><td>Chronological actions with actor and timestamp.</td></tr>
+    </tbody>
+  </table>
+  <div style="background:#f4f3ee; border:1px dashed #999; padding:14px; margin:16px 0; text-align:center; font-style:italic;">
+    [Insert screenshot of the voting page and the receipt confirmation here]
+  </div>
+
+  <!-- 4.7 -->
+  <h2>4.7 Overall Data Flow Diagram of the New System</h2>
+  <p>
+    The diagram presents the level one flow of data among external entities, processing
+    functions and stored records. Rectangles denote entities, rounded shapes denote processes,
+    and open ended bars denote data stores.
+  </p>
+
+  <svg viewBox="0 0 900 640" width="100%" style="border:1px solid #ccc; background:#fff; font-family: Arial, sans-serif;">
+    <defs>
+      <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L8,3 L0,6 Z" fill="#333"/>
+      </marker>
+    </defs>
+
+    <!-- Entities -->
+    <rect x="30" y="40" width="150" height="55" fill="#E4F3EA" stroke="#0D7E45" stroke-width="2"/>
+    <text x="105" y="73" text-anchor="middle" font-size="14">Student / Voter</text>
+
+    <rect x="30" y="290" width="150" height="55" fill="#E4F3EA" stroke="#0D7E45" stroke-width="2"/>
+    <text x="105" y="323" text-anchor="middle" font-size="14">Election Officer</text>
+
+    <rect x="30" y="540" width="150" height="55" fill="#E4F3EA" stroke="#0D7E45" stroke-width="2"/>
+    <text x="105" y="573" text-anchor="middle" font-size="14">Super Admin</text>
+
+    <!-- Processes -->
+    <rect x="330" y="35" width="170" height="65" rx="30" fill="#DFF3F1" stroke="#0C7768" stroke-width="2"/>
+    <text x="415" y="63" text-anchor="middle" font-size="13">1.0 Authenticate</text>
+    <text x="415" y="80" text-anchor="middle" font-size="13">User</text>
+
+    <rect x="330" y="180" width="170" height="65" rx="30" fill="#DFF3F1" stroke="#0C7768" stroke-width="2"/>
+    <text x="415" y="208" text-anchor="middle" font-size="13">2.0 Manage</text>
+    <text x="415" y="225" text-anchor="middle" font-size="13">Election</text>
+
+    <rect x="330" y="325" width="170" height="65" rx="30" fill="#DFF3F1" stroke="#0C7768" stroke-width="2"/>
+    <text x="415" y="353" text-anchor="middle" font-size="13">3.0 Cast</text>
+    <text x="415" y="370" text-anchor="middle" font-size="13">Ballot</text>
+
+    <rect x="330" y="470" width="170" height="65" rx="30" fill="#DFF3F1" stroke="#0C7768" stroke-width="2"/>
+    <text x="415" y="498" text-anchor="middle" font-size="13">4.0 Compute</text>
+    <text x="415" y="515" text-anchor="middle" font-size="13">Results</text>
+
+    <!-- Data stores -->
+    <rect x="680" y="45" width="190" height="45" fill="#FFF8E7" stroke="#B8860B" stroke-width="1.5"/>
+    <text x="775" y="72" text-anchor="middle" font-size="13">D1 Users</text>
+
+    <rect x="680" y="190" width="190" height="45" fill="#FFF8E7" stroke="#B8860B" stroke-width="1.5"/>
+    <text x="775" y="217" text-anchor="middle" font-size="13">D2 Elections and Candidates</text>
+
+    <rect x="680" y="335" width="190" height="45" fill="#FFF8E7" stroke="#B8860B" stroke-width="1.5"/>
+    <text x="775" y="362" text-anchor="middle" font-size="13">D3 Vote Ledger</text>
+
+    <rect x="680" y="415" width="190" height="45" fill="#FFF8E7" stroke="#B8860B" stroke-width="1.5"/>
+    <text x="775" y="442" text-anchor="middle" font-size="13">D4 Voter Records</text>
+
+    <rect x="680" y="545" width="190" height="45" fill="#FFF8E7" stroke="#B8860B" stroke-width="1.5"/>
+    <text x="775" y="572" text-anchor="middle" font-size="13">D5 Audit Logs</text>
+
+    <!-- Flows: Student -->
+    <line x1="180" y1="60" x2="328" y2="65" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="235" y="52" font-size="11">credentials</text>
+    <line x1="180" y1="82" x2="180" y2="355" stroke="#333" stroke-width="1.5"/>
+    <line x1="180" y1="355" x2="328" y2="357" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="210" y="350" font-size="11">ballot selection</text>
+
+    <!-- Officer -->
+    <line x1="180" y1="312" x2="328" y2="215" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="205" y="255" font-size="11">election data</text>
+
+    <!-- Super admin -->
+    <line x1="180" y1="560" x2="328" y2="510" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="205" y="548" font-size="11">publish command</text>
+
+    <!-- Process to stores -->
+    <line x1="500" y1="67" x2="678" y2="67" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="545" y="58" font-size="11">verify identity</text>
+
+    <line x1="500" y1="212" x2="678" y2="212" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="545" y="203" font-size="11">store election</text>
+
+    <line x1="500" y1="352" x2="678" y2="352" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="545" y="343" font-size="11">write ballot</text>
+
+    <line x1="500" y1="372" x2="678" y2="435" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="545" y="415" font-size="11">log participation</text>
+
+    <line x1="500" y1="500" x2="678" y2="565" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="545" y="540" font-size="11">record action</text>
+
+    <!-- Results reads ledger -->
+    <line x1="678" y1="357" x2="502" y2="490" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="560" y="430" font-size="11">read tallies</text>
+  </svg>
+
+  <!-- 4.8 -->
+  <h2>4.8 Program Flowchart</h2>
+  <p>
+    The flowchart traces the logic of the core voting routine, from sign in through ballot
+    submission to the issue of a receipt. Diamonds represent decision points and rectangles
+    represent processing steps.
+  </p>
+
+  <svg viewBox="0 0 500 900" width="100%" style="border:1px solid #ccc; background:#fff; font-family: Arial, sans-serif; max-width:520px;">
+    <defs>
+      <marker id="fa" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L8,3 L0,6 Z" fill="#333"/>
+      </marker>
+    </defs>
+
+    <!-- Start -->
+    <ellipse cx="250" cy="35" rx="70" ry="25" fill="#E4F3EA" stroke="#0D7E45" stroke-width="2"/>
+    <text x="250" y="40" text-anchor="middle" font-size="13">Start</text>
+    <line x1="250" y1="60" x2="250" y2="85" stroke="#333" stroke-width="1.5" marker-end="url(#fa)"/>
+
+    <!-- Login -->
+    <rect x="160" y="88" width="180" height="45" fill="#DFF3F1" stroke="#0C7768" stroke-width="2"/>
+    <text x="250" y="115" text-anchor="middle" font-size="13">Enter login credentials</text>
+    <line x1="250" y1="133" x2="250" y2="158" stroke="#333" stroke-width="1.5" marker-end="url(#fa)"/>
+
+    <!-- Verified decision -->
+    <polygon points="250,160 340,205 250,250 160,205" fill="#FFF8E7" stroke="#B8860B" stroke-width="2"/>
+    <text x="250" y="200" text-anchor="middle" font-size="12">Account</text>
+    <text x="250" y="216" text-anchor="middle" font-size="12">verified?</text>
+
+    <!-- No branch -->
+    <line x1="340" y1="205" x2="430" y2="205" stroke="#333" stroke-width="1.5" marker-end="url(#fa)"/>
+    <text x="360" y="197" font-size="11">No</text>
+    <rect x="360" y="235" width="130" height="45" fill="#FFF0F0" stroke="#EF4444" stroke-width="2"/>
+    <text x="425" y="255" text-anchor="middle" font-size="11">Deny access</text>
+    <text x="425" y="271" text-anchor="middle" font-size="11">and stop</text>
+    <line x1="430" y1="205" x2="425" y2="233" stroke="#333" stroke-width="1.5" marker-end="url(#fa)"/>
+
+    <!-- Yes -->
+    <line x1="250" y1="250" x2="250" y2="278" stroke="#333" stroke-width="1.5" marker-end="url(#fa)"/>
+    <text x="258" y="268" font-size="11">Yes</text>
+
+    <!-- Load elections -->
+    <rect x="150" y="280" width="200" height="45" fill="#DFF3F1" stroke="#0C7768" stroke-width="2"/>
+    <text x="250" y="307" text-anchor="middle" font-size="13">Load active elections</text>
+    <line x1="250" y1="325" x2="250" y2="350" stroke="#333" stroke-width="1.5" marker-end="url(#fa)"/>
+
+    <!-- Eligibility decision -->
+    <polygon points="250,352 350,400 250,448 150,400" fill="#FFF8E7" stroke="#B8860B" stroke-width="2"/>
+    <text x="250" y="394" text-anchor="middle" font-size="12">Eligible and</text>
+    <text x="250" y="410" text-anchor="middle" font-size="12">not yet voted?</text>
+
+    <line x1="350" y1="400" x2="430" y2="400" stroke="#333" stroke-width="1.5" marker-end="url(#fa)"/>
+    <text x="365" y="392" font-size="11">No</text>
+    <rect x="365" y="430" width="125" height="45" fill="#FFF0F0" stroke="#EF4444" stroke-width="2"/>
+    <text x="427" y="450" text-anchor="middle" font-size="11">Block voting</text>
+    <text x="427" y="466" text-anchor="middle" font-size="11">and notify</text>
+    <line x1="430" y1="400" x2="427" y2="428" stroke="#333" stroke-width="1.5" marker-end="url(#fa)"/>
+
+    <line x1="250" y1="448" x2="250" y2="476" stroke="#333" stroke-width="1.5" marker-end="url(#fa)"/>
+    <text x="258" y="466" font-size="11">Yes</text>
+
+    <!-- Display candidates -->
+    <rect x="150" y="478" width="200" height="45" fill="#DFF3F1" stroke="#0C7768" stroke-width="2"/>
+    <text x="250" y="505" text-anchor="middle" font-size="13">Display candidates</text>
+    <line x1="250" y1="523" x2="250" y2="548" stroke="#333" stroke-width="1.5" marker-end="url(#fa)"/>
+
+    <!-- Select -->
+    <rect x="150" y="550" width="200" height="45" fill="#DFF3F1" stroke="#0C7768" stroke-width="2"/>
+    <text x="250" y="577" text-anchor="middle" font-size="13">Select and submit choice</text>
+    <line x1="250" y1="595" x2="250" y2="620" stroke="#333" stroke-width="1.5" marker-end="url(#fa)"/>
+
+    <!-- Store -->
+    <rect x="130" y="622" width="240" height="55" fill="#DFF3F1" stroke="#0C7768" stroke-width="2"/>
+    <text x="250" y="645" text-anchor="middle" font-size="12">Write anonymous ballot and</text>
+    <text x="250" y="662" text-anchor="middle" font-size="12">participation record</text>
+    <line x1="250" y1="677" x2="250" y2="702" stroke="#333" stroke-width="1.5" marker-end="url(#fa)"/>
+
+    <!-- Receipt -->
+    <rect x="150" y="704" width="200" height="45" fill="#DFF3F1" stroke="#0C7768" stroke-width="2"/>
+    <text x="250" y="731" text-anchor="middle" font-size="13">Generate receipt hash</text>
+    <line x1="250" y1="749" x2="250" y2="774" stroke="#333" stroke-width="1.5" marker-end="url(#fa)"/>
+
+    <!-- Confirm -->
+    <rect x="150" y="776" width="200" height="45" fill="#DFF3F1" stroke="#0C7768" stroke-width="2"/>
+    <text x="250" y="803" text-anchor="middle" font-size="13">Show confirmation</text>
+    <line x1="250" y1="821" x2="250" y2="846" stroke="#333" stroke-width="1.5" marker-end="url(#fa)"/>
+
+    <!-- End -->
+    <ellipse cx="250" cy="872" rx="70" ry="25" fill="#E4F3EA" stroke="#0D7E45" stroke-width="2"/>
+    <text x="250" y="877" text-anchor="middle" font-size="13">End</text>
+  </svg>
+
+  <!-- 4.9 -->
+  <h2>4.9 Program Documentation and Implementation</h2>
+  <p>
+    The application follows a client and server architecture. The browser client is a single
+    page application built with the React library, while the server exposes a set of protected
+    endpoints under a REST interface. Communication occurs over HTTP using JSON payloads, and
+    every privileged request carries a signed token that the server validates before granting
+    access.
+  </p>
+  <p>
+    On the server, an incoming request first passes through authentication middleware, then
+    through role middleware that confirms the caller holds the required tier. The request then
+    reaches its controller, which performs the operation through the data access layer and
+    returns a structured response. On the client, each screen fetches its data on load and
+    renders progressive feedback, so the user is never left uncertain about the state of an
+    action. The build was verified after each feature by compiling the client bundle and
+    starting both processes locally.
+  </p>
+  <div style="background:#f4f3ee; border:1px dashed #999; padding:14px; margin:16px 0; text-align:center; font-style:italic;">
+    [Insert screenshot of the account settings page and the candidate management page here]
+  </div>
+
+  <!-- 4.10 -->
+  <h2>4.10 Language Justification</h2>
+  <p>
+    JavaScript was adopted across the entire stack. This single language choice removes the
+    friction of switching between two syntaxes and allows shared validation logic between the
+    client and the server.
+  </p>
+  <table border="1" cellspacing="0" cellpadding="8" style="border-collapse: collapse; width: 100%;">
+    <thead style="background:#E4F3EA;"><tr><th align="left">Technology</th><th align="left">Reason for Selection</th></tr></thead>
+    <tbody>
+      <tr><td>React</td><td>Component based rendering keeps the interface responsive and encourages reuse of visual elements.</td></tr>
+      <tr><td>Node.js with Express</td><td>Lightweight and event driven, well suited to handling many concurrent voting requests.</td></tr>
+      <tr><td>Prisma with SQLite</td><td>A typed data layer that guards against malformed queries and simplifies schema evolution.</td></tr>
+      <tr><td>JSON Web Tokens</td><td>Stateless session handling that scales without server side session storage.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 4.11 -->
+  <h2>4.11 Hardware and Operating System Requirements</h2>
+  <table border="1" cellspacing="0" cellpadding="8" style="border-collapse: collapse; width: 100%;">
+    <thead style="background:#E4F3EA;"><tr><th align="left">Category</th><th align="left">Minimum Requirement</th></tr></thead>
+    <tbody>
+      <tr><td>Processor</td><td>Dual core processor rated at 2.0 GHz or higher.</td></tr>
+      <tr><td>Memory</td><td>4 GB of RAM for development, 2 GB for a client device.</td></tr>
+      <tr><td>Storage</td><td>500 MB of free space for the application and database file.</td></tr>
+      <tr><td>Operating system</td><td>Windows 10 or later, macOS, or a modern Linux distribution.</td></tr>
+      <tr><td>Runtime</td><td>Node.js version 18 or later installed on the host.</td></tr>
+      <tr><td>Client software</td><td>A current version of Chrome, Firefox, Edge or Safari.</td></tr>
+      <tr><td>Network</td><td>A stable internet connection for remote access to the server.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 4.12 -->
+  <h2>4.12 Software Testing</h2>
+  <p>
+    Testing was carried out at several levels to confirm that individual units behave correctly
+    and that the assembled system meets its requirements. The table records representative test
+    cases together with their expected and observed behaviour.
+  </p>
+  <table border="1" cellspacing="0" cellpadding="6" style="border-collapse: collapse; width: 100%;">
+    <thead style="background:#E4F3EA;">
+      <tr><th align="left">Test Case</th><th align="left">Expected Result</th><th align="left">Observed Result</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Register with a non institutional email</td><td>Request rejected with a domain error</td><td>Passed</td></tr>
+      <tr><td>Log in before email verification</td><td>Access withheld with a prompt to verify</td><td>Passed</td></tr>
+      <tr><td>Attempt to vote twice for one seat</td><td>Second attempt refused by the unique constraint</td><td>Passed</td></tr>
+      <tr><td>Officer tries to publish results</td><td>Action denied by the role guard</td><td>Passed</td></tr>
+      <tr><td>Change password with a wrong current value</td><td>Update rejected as incorrect</td><td>Passed</td></tr>
+      <tr><td>Cast a valid ballot</td><td>Receipt hash returned and confirmation shown</td><td>Passed</td></tr>
+    </tbody>
+  </table>
+  <p>
+    Functional testing confirmed that every menu path leads to a working screen, while security
+    testing confirmed that protected routes reject requests that lack a valid token or the
+    correct role.
+  </p>
+
+  <!-- 4.13 -->
+  <h2>4.13 User Manual</h2>
+  <h3>4.13.1 Guide for Students</h3>
+  <ol>
+    <li>Open the platform and choose the option to create an account.</li>
+    <li>Complete the form with accurate personal and academic details, then submit.</li>
+    <li>Open the verification link sent to the supplied email address.</li>
+    <li>Sign in and review the dashboard for elections that are open.</li>
+    <li>Open an election, read the manifestos, and choose a preferred candidate for each seat.</li>
+    <li>Submit the ballot and save the receipt returned by the system.</li>
+    <li>Once results are released, revisit the election to view the outcome.</li>
+  </ol>
+  <div style="background:#f4f3ee; border:1px dashed #999; padding:14px; margin:16px 0; text-align:center; font-style:italic;">
+    [Insert screenshot of the registration page and the login page here]
+  </div>
+  <h3>4.13.2 Guide for Administrators</h3>
+  <ol>
+    <li>Sign in with an officer or super administrator account.</li>
+    <li>Open the admin panel and create a new election with its positions and schedule.</li>
+    <li>Register the aspirants for each seat through candidate management.</li>
+    <li>Publish any relevant notices from the announcements area.</li>
+    <li>Where a super administrator is signed in, activate the election so that voting begins.</li>
+    <li>After closure, publish the results and, if a dispute arises, trigger a recount.</li>
+    <li>Provision additional officer accounts from the user management area as needed.</li>
+  </ol>
+  <div style="background:#f4f3ee; border:1px dashed #999; padding:14px; margin:16px 0; text-align:center; font-style:italic;">
+    [Insert screenshot of the user management page and the results page here]
+  </div>
+
+</section>
+<!-- ================= END CHAPTER FOUR ================= -->
+</body>
+</html>
