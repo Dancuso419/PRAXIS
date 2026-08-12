@@ -3332,9 +3332,26 @@ button.header-user {
 @media (max-width: 1024px) {
   .hero-visual { max-width: 420px; margin: 0 auto; }
 }
-@media (max-width: 480px) {
-  .hero-visual { max-width: 340px; }
-  .hv-card-results { width: 148px; }
+
+/* On phones the floating cards overlap; show only the clean main card. */
+@media (max-width: 768px) {
+  .hero-visual {
+    max-width: 300px;
+    aspect-ratio: auto;
+    margin: 8px auto 0;
+  }
+  .hv-card-results,
+  .hv-card-receipt,
+  .hv-card-turnout {
+    display: none;
+  }
+  .hv-card-main {
+    position: static;
+    width: 100%;
+  }
+  .hero-visual-glow {
+    inset: -6% 0;
+  }
 }
 
 /* ================================================================
