@@ -3059,31 +3059,35 @@ button.header-user {
   .bottom-nav {
     display: flex;
     position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    left: 50%;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: calc(100vw - 28px);
     z-index: var(--z-sidebar);
     background: var(--card-bg);
-    border-top: 1px solid var(--border);
-    box-shadow: 0 -2px 14px rgba(0, 0, 0, 0.05);
-    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
-    justify-content: space-around;
-    align-items: stretch;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
+    padding: 6px;
+    gap: 2px;
+    justify-content: center;
+    align-items: center;
   }
 
   .bottom-nav-item {
-    flex: 1 1 0;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 3px;
-    padding: 6px 2px;
+    padding: 8px 12px;
     text-decoration: none;
     color: var(--text-muted);
-    font-size: 0.66rem;
+    font-size: 0.64rem;
     font-weight: 600;
-    border-radius: var(--radius-sm);
-    transition: color 0.15s ease;
+    border-radius: var(--radius-pill);
+    transition: color 0.15s ease, background 0.15s ease;
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -3091,7 +3095,7 @@ button.header-user {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 26px;
+    height: 24px;
     transition: transform 0.15s ease;
   }
 
@@ -3102,6 +3106,7 @@ button.header-user {
 
   .bottom-nav-item.active {
     color: var(--primary);
+    background: var(--primary-light);
   }
   .bottom-nav-item.active .bottom-nav-icon {
     transform: translateY(-1px);
@@ -3130,8 +3135,9 @@ button.header-user {
 }
 
 @media (max-width: 480px) {
-  .bottom-nav-label { font-size: 0.62rem; }
-  .main-content { padding: 16px 12px calc(82px + env(safe-area-inset-bottom)); }
+  .bottom-nav-label { font-size: 0.6rem; }
+  .bottom-nav-item { padding: 7px 9px; }
+  .main-content { padding: 16px 12px calc(96px + env(safe-area-inset-bottom)); }
 }
 
 /* ================================================================
