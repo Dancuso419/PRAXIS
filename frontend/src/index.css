@@ -2155,7 +2155,27 @@ tbody tr:hover {
   }
 
   .landing-nav {
-    padding: 16px 20px;
+    padding: 14px 18px;
+    gap: 12px;
+  }
+
+  /* Section anchor links are scroll shortcuts; drop them on mobile to
+     leave room for the brand and the auth actions. */
+  .landing-nav-links a[href^="#"] {
+    display: none;
+  }
+
+  .landing-nav-links {
+    gap: 10px;
+  }
+
+  .landing-nav-links .btn {
+    padding: 9px 16px;
+    font-size: 0.85rem;
+  }
+
+  .landing-nav-name {
+    font-size: 1.15rem;
   }
 
   .landing-hero {
@@ -2199,6 +2219,18 @@ tbody tr:hover {
 
   .landing-hero-cta {
     flex-direction: column;
+  }
+
+  /* Very narrow phones: tighten the nav so the buttons never collide */
+  .landing-nav {
+    padding: 12px 14px;
+  }
+  .landing-nav-links {
+    gap: 8px;
+  }
+  .landing-nav-links .btn {
+    padding: 8px 13px;
+    font-size: 0.82rem;
   }
 }
 
