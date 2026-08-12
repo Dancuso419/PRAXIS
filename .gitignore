@@ -13,3 +13,6 @@ dist/
 # OS / logs
 .DS_Store
 *.log
+
+# Private credentials reference
+ACCOUNTS.md
