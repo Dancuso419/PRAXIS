@@ -21,8 +21,8 @@ const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
 app.use(cors({
   origin(origin, callback) {
     // Allow non-browser clients (no origin) and any listed origin.
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('Not allowed by CORS'));
+    // Unknown origins are simply not granted CORS (no error, no 500).
+    return callback(null, !origin || allowedOrigins.includes(origin));
   },
   credentials: true,
 }));
