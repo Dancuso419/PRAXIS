@@ -2154,9 +2154,21 @@ tbody tr:hover {
     padding: 32px 20px;
   }
 
+  /* Floating pill nav on mobile */
   .landing-nav {
-    padding: 14px 18px;
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    margin: 0;
+    z-index: var(--z-sticky);
+    padding: 9px 12px 9px 16px;
     gap: 12px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
   }
 
   /* Section anchor links are scroll shortcuts; drop them on mobile to
@@ -2166,7 +2178,7 @@ tbody tr:hover {
   }
 
   .landing-nav-links {
-    gap: 10px;
+    gap: 8px;
   }
 
   .landing-nav-links .btn {
@@ -2178,8 +2190,9 @@ tbody tr:hover {
     font-size: 1.15rem;
   }
 
+  /* Clear space for the fixed pill */
   .landing-hero {
-    padding: 40px 20px 60px;
+    padding: 92px 20px 60px;
   }
 
   .landing-hero h1 {
@@ -2221,12 +2234,12 @@ tbody tr:hover {
     flex-direction: column;
   }
 
-  /* Very narrow phones: tighten the nav so the buttons never collide */
+  /* Very narrow phones: keep the pill compact so buttons never collide */
   .landing-nav {
-    padding: 12px 14px;
+    padding: 8px 10px 8px 14px;
   }
   .landing-nav-links {
-    gap: 8px;
+    gap: 6px;
   }
   .landing-nav-links .btn {
     padding: 8px 13px;
@@ -3059,35 +3072,31 @@ button.header-user {
   .bottom-nav {
     display: flex;
     position: fixed;
-    left: 50%;
-    bottom: calc(14px + env(safe-area-inset-bottom));
-    transform: translateX(-50%);
-    width: max-content;
-    max-width: calc(100vw - 28px);
+    left: 0;
+    right: 0;
+    bottom: 0;
     z-index: var(--z-sidebar);
     background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-pill);
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
-    padding: 6px;
-    gap: 2px;
-    justify-content: center;
-    align-items: center;
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -2px 14px rgba(0, 0, 0, 0.05);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    justify-content: space-around;
+    align-items: stretch;
   }
 
   .bottom-nav-item {
+    flex: 1 1 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
     gap: 3px;
-    padding: 8px 12px;
+    padding: 6px 2px;
     text-decoration: none;
     color: var(--text-muted);
-    font-size: 0.64rem;
+    font-size: 0.66rem;
     font-weight: 600;
-    border-radius: var(--radius-pill);
-    transition: color 0.15s ease, background 0.15s ease;
+    border-radius: var(--radius-sm);
+    transition: color 0.15s ease;
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -3095,7 +3104,7 @@ button.header-user {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 24px;
+    height: 26px;
     transition: transform 0.15s ease;
   }
 
@@ -3106,7 +3115,6 @@ button.header-user {
 
   .bottom-nav-item.active {
     color: var(--primary);
-    background: var(--primary-light);
   }
   .bottom-nav-item.active .bottom-nav-icon {
     transform: translateY(-1px);
@@ -3135,9 +3143,8 @@ button.header-user {
 }
 
 @media (max-width: 480px) {
-  .bottom-nav-label { font-size: 0.6rem; }
-  .bottom-nav-item { padding: 7px 9px; }
-  .main-content { padding: 16px 12px calc(96px + env(safe-area-inset-bottom)); }
+  .bottom-nav-label { font-size: 0.62rem; }
+  .main-content { padding: 16px 12px calc(82px + env(safe-area-inset-bottom)); }
 }
 
 /* ================================================================
