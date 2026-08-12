@@ -5,7 +5,9 @@ const { hashPassword } = require('../src/utils/hashPassword');
 async function seed() {
   console.log('Seeding database...');
 
-  const adminPassword = await hashPassword('admin123');
+  // Super admin password is configurable via env for production; falls back for local dev.
+  const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || 'admin123';
+  const adminPassword = await hashPassword(superAdminPassword);
   const admin = await prisma.user.upsert({
     where: { email: 'admin@praxis.edu' },
     update: {},
@@ -125,7 +127,7 @@ async function seed() {
   console.log('Created announcement');
 
   console.log('\nSeed complete! Test accounts:');
-  console.log('  SUPER_ADMIN: admin@praxis.edu / admin123');
+  console.log(`  SUPER_ADMIN: admin@praxis.edu / ${process.env.SUPER_ADMIN_PASSWORD ? '(set via SUPER_ADMIN_PASSWORD)' : 'admin123'}`);
   console.log('  ELECTION_OFFICER: officer@praxis.edu / officer123');
   console.log('  STUDENT: student@praxis.edu / student123');
 }
